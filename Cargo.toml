@@ -1,0 +1,59 @@
+[package]
+name = "high-performance-server"
+version = "0.1.0"
+edition = "2021"
+authors = ["Your Name <your.email@example.com>"]
+description = "High-performance Rust server architecture"
+
+[dependencies]
+tokio = { version = "1.28", features = ["full"] }
+bytes = "1.4"
+futures = "0.3"
+socket2 = "0.5"
+parking_lot = "0.12"
+libc = "0.2"
+num_cpus = "1.15"
+crossbeam = "0.8"
+log = "0.4"
+metrics = "0.21"
+thiserror = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+ctrlc = "3.2"
+base64 = "0.13"
+flate2 = "1.0"
+
+[dev-dependencies]
+criterion = "0.5"
+rand = "0.8"
+chrono = "0.4"
+
+[[bench]]
+name = "server_benchmark"
+harness = false
+
+[[example]]
+name = "metrics_viewer"
+path = "examples/metrics_viewer.rs"
+
+[[example]]
+name = "load_test"
+path = "examples/load_test.rs"
+
+[[example]]
+name = "api_server"
+path = "examples/api_server.rs"
+
+[[example]]
+name = "web_server"
+path = "examples/web_server.rs"
+
+[[example]]
+name = "static_server"
+path = "examples/static_server.rs"
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3
+panic = "abort"

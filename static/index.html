@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>High-Performance Rust Server</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 1.2em;
+        }
+        section {
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: #2c3e50;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+        code {
+            background-color: #f5f5f5;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .endpoint {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .endpoint h3 {
+            margin-top: 0;
+            color: #16a085;
+        }
+        .method {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-weight: bold;
+            color: white;
+        }
+        .get { background-color: #2ecc71; }
+        .post { background-color: #3498db; }
+        .put { background-color: #f39c12; }
+        .delete { background-color: #e74c3c; }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #server-info {
+            font-family: 'Courier New', Courier, monospace;
+            white-space: pre;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 3px solid #3498db;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: none;
+            margin-left: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>High-Performance Rust Server</h1>
+        <p class="subtitle">A blazing-fast HTTP server built with Rust</p>
+    </header>
+    
+    <section>
+        <h2>Server Information</h2>
+        <button id="fetch-info">Fetch Server Info</button>
+        <span class="loader" id="info-loader"></span>
+        <div id="server-info">Click the button to fetch server info...</div>
+    </section>
+    
+    <section>
+        <h2>Available API Endpoints</h2>
+        
+        <div class="endpoint">
+            <h3><span class="method get">GET</span> /api/info</h3>
+            <p>Returns information about the server, including version, uptime, and stats.</p>
+            <pre>curl http://localhost:8080/api/info</pre>
+        </div>
+        
+        <div class="endpoint">
+            <h3><span class="method post">POST</span> /api/echo</h3>
+            <p>Echoes back whatever data is sent in the request body.</p>
+            <pre>curl -X POST -d "Hello, Server!" http://localhost:8080/api/echo</pre>
+        </div>
+        
+        <div class="endpoint">
+            <h3><span class="method get">GET</span> /hello/:name</h3>
+            <p>Returns a personalized greeting using the name parameter.</p>
+            <pre>curl http://localhost:8080/hello/World</pre>
+        </div>
+    </section>
+    
+    <section>
+        <h2>Echo Test</h2>
+        <textarea id="echo-input" rows="5" style="width: 100%" placeholder="Enter text to echo..."></textarea>
+        <div style="margin-top: 10px;">
+            <button id="send-echo">Send to Echo Endpoint</button>
+            <span class="loader" id="echo-loader"></span>
+        </div>
+        <div id="echo-result" style="margin-top: 10px;"></div>
+    </section>
+    
+    <footer style="margin-top: 50px; border-top: 1px solid #eee; padding-top: 20px; text-align: center; color: #7f8c8d;">
+        <p>High-Performance Rust Server Example &copy; 2023</p>
+    </footer>
+    
+    <script>
+        document.getElementById('fetch-info').addEventListener('click', async () => {
+            const infoElement = document.getElementById('server-info');
+            const loader = document.getElementById('info-loader');
+            
+            loader.style.display = 'inline-block';
+            
+            try {
+                const response = await fetch('/api/info');
+                const data = await response.json();
+                infoElement.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                infoElement.textContent = `Error: ${error.message}`;
+            } finally {
+                loader.style.display = 'none';
+            }
+        });
+        
+        document.getElementById('send-echo').addEventListener('click', async () => {
+            const inputElement = document.getElementById('echo-input');
+            const resultElement = document.getElementById('echo-result');
+            const loader = document.getElementById('echo-loader');
+            
+            const inputText = inputElement.value;
+            if (!inputText.trim()) {
+                resultElement.innerHTML = '<div style="color: #e74c3c;">Please enter some text to echo.</div>';
+                return;
+            }
+            
+            loader.style.display = 'inline-block';
+            resultElement.innerHTML = '';
+            
+            try {
+                const response = await fetch('/api/echo', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain'
+                    },
+                    body: inputText
+                });
+                
+                const data = await response.text();
+                resultElement.innerHTML = `
+                    <div style="margin-top: 10px; padding: 10px; background-color: #f5f5f5; border-radius: 5px;">
+                        <div style="color: #16a085; margin-bottom: 5px;">Response:</div>
+                        <div>${data}</div>
+                    </div>
+                `;
+            } catch (error) {
+                resultElement.innerHTML = `<div style="color: #e74c3c;">Error: ${error.message}</div>`;
+            } finally {
+                loader.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
