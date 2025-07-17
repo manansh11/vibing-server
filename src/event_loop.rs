@@ -64,7 +64,7 @@ impl EventPoller {
     }
     
     /// Register a connection with the poller
-    pub fn register(&self, connection: &Connection) -> ServerResult<()> {
+    pub fn register(&mut self, connection: &Connection) -> ServerResult<()> {
         let fd = connection.stream().as_raw_fd();
         let mut event = libc::epoll_event {
             events: (EPOLLIN | EPOLLOUT | EPOLLET | EPOLLRDHUP) as u32,
@@ -88,7 +88,7 @@ impl EventPoller {
     }
     
     /// Deregister a connection from the poller
-    pub fn deregister(&self, connection: &Connection) -> ServerResult<()> {
+    pub fn deregister(&mut self, connection: &Connection) -> ServerResult<()> {
         let fd = connection.stream().as_raw_fd();
         let ret = unsafe {
             libc::epoll_ctl(
@@ -159,7 +159,7 @@ impl EventPoller {
     }
     
     /// Register a connection with the poller
-    pub fn register(&self, connection: &Connection) -> ServerResult<()> {
+    pub fn register(&mut self, connection: &Connection) -> ServerResult<()> {
         let fd = connection.stream().as_raw_fd();
         let conn_id = connection.id();
         
@@ -201,14 +201,13 @@ impl EventPoller {
         }
         
         // Store connection ID to fd mapping
-        let mut conn_map = self.conn_map.clone();
-        conn_map.insert(conn_id, fd);
+        self.conn_map.insert(conn_id, fd);
         
         Ok(())
     }
     
     /// Deregister a connection from the poller
-    pub fn deregister(&self, connection: &Connection) -> ServerResult<()> {
+    pub fn deregister(&mut self, connection: &Connection) -> ServerResult<()> {
         let fd = connection.stream().as_raw_fd();
         let conn_id = connection.id();
         
@@ -254,8 +253,7 @@ impl EventPoller {
         }
         
         // Remove connection ID from mapping
-        let mut conn_map = self.conn_map.clone();
-        conn_map.remove(&conn_id);
+        self.conn_map.remove(&conn_id);
         
         Ok(())
     }
@@ -333,11 +331,11 @@ impl EventPoller {
         unimplemented!("Windows support not yet implemented");
     }
     
-    pub fn register(&self, _connection: &Connection) -> ServerResult<()> {
+    pub fn register(&mut self, _connection: &Connection) -> ServerResult<()> {
         unimplemented!("Windows support not yet implemented");
     }
     
-    pub fn deregister(&self, _connection: &Connection) -> ServerResult<()> {
+    pub fn deregister(&mut self, _connection: &Connection) -> ServerResult<()> {
         unimplemented!("Windows support not yet implemented");
     }
     
@@ -353,11 +351,11 @@ impl EventPoller {
         Err(ServerError::EventLoop("Unsupported platform".to_string()))
     }
     
-    pub fn register(&self, _connection: &Connection) -> ServerResult<()> {
+    pub fn register(&mut self, _connection: &Connection) -> ServerResult<()> {
         Err(ServerError::EventLoop("Unsupported platform".to_string()))
     }
     
-    pub fn deregister(&self, _connection: &Connection) -> ServerResult<()> {
+    pub fn deregister(&mut self, _connection: &Connection) -> ServerResult<()> {
         Err(ServerError::EventLoop("Unsupported platform".to_string()))
     }
     
@@ -618,6 +616,7 @@ impl EventLoop {
             // Get the request before we borrow self again
             let request = parser.get_request()?;
             
+            
             // Clone the request to avoid borrow issues
             let request_clone = request.clone();
             
@@ -631,11 +630,15 @@ impl EventLoop {
             let mut encoded = Vec::new();
             response.serialize(&mut encoded)?;
             
+            
             // Finally get a mutable reference to the connection
             let connection = self.connections.get_mut(&conn_id).unwrap();
             connection.set_state(ConnectionState::Processing);
             connection.buffer_mut().write(&encoded)?;
             connection.set_state(ConnectionState::Writing);
+            
+            // Immediately try to write the response to the TCP stream
+            self.handle_write(conn_id)?;
         }
         
         Ok(())
